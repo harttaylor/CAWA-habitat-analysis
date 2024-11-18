@@ -4,18 +4,17 @@ library(dplyr)
 library(tidyr)
 library(lubridate)
 
-# Format detection data for SSOM 
-load("0_data/raw/BTNWSurveys&Covs.Rdata")
+# Find locations where we have 2 years of data and 3 visits per year
+load("0_data/raw/CAWASurveys.Rdata")
 
-load("C:/Users/hartt/Documents/Chapter 2/Choosing new BTNW sites/From Elly/ABbirddataset.Rdata")
-# Load the dataset
-visits <- read.csv("0_data/raw/visits_allAB_unfiltered.csv") 
+# Merge the two dataframes 
+visits <- merge(bird_cawa, visit_cawa, by = "surveyid")
 
-# Convert BTNW column to binary detections/nondetections
+# Convert CAWA column to binary detections/nondetections
 visits <- visits %>% 
-  mutate(BTNW_binary = ifelse(BTNW > 0, 1, 0))
+  mutate(CAWA_binary = ifelse(CAWA > 0, 1, 0))
 
-visits <-read.csv("1_Data/multiyearvisits_bufferedptsremoved.csv")
+
 # Filter for locations with 3 or more visits per gisid and year, sampling exactly 3 visits per year
 filtered_visits <- visits %>%
   group_by(gisid, year) %>%
@@ -26,13 +25,13 @@ filtered_visits <- visits %>%
 # Group by coordinates and filter for sites with two or more distinct years
 multi_year_visits <- filtered_visits %>%
   group_by(Easting, Northing) %>%
-  filter(n_distinct(year) >= 2) %>%
+  filter(n_distinct(year) >= 4) %>%
   ungroup() 
 
 # Sample exactly two years for each site with more than two years
 multi_year_visits <- multi_year_visits %>%
   group_by(Easting, Northing) %>%
-  filter(year %in% sample(unique(year), 2)) %>%
+  filter(year %in% sample(unique(year), 4)) %>%
   ungroup()
 
 # Create a unique identifier for each site based on coordinates
@@ -80,7 +79,7 @@ visit_matrix <- multi_year_visits %>%
   pivot_wider(
     id_cols = gisid,                    # Each row represents a unique site
     names_from = visit_id,              # Column names are the visit identifiers
-    values_from = BTNW_binary           # Detection data as the values, keeping NAs for missing visits
+    values_from = CAWA_binary           # Detection data as the values, keeping NAs for missing visits
   )
 
 # Combine the year and location information with the visit matrix
